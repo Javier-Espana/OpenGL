@@ -1,0 +1,112 @@
+# Blender MTL File: 'Geothermal Steam Factory_no_sparks.blend'
+# Material Count: 9
+
+newmtl Entrance_1
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.449837 0.449837 0.449837
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd -s 2.000000 2.000000 1.000000 textures\\Planks2.jpg
+
+newmtl Entrance_2
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd  textures\\rocks_grey.jpg
+
+newmtl Lava
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.220382 0.032526 0.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Bump -bm 4.253082 textures\\ani wasser textur.jpg
+map_Kd  textures\\ani wasser textur.jpg
+map_Ke  textures\\Stahl Hulle Grün_NRM.png
+refl  textures\\Stahl Hulle Grün_NRM.png
+
+newmtl Material.001
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 0.000000
+illum 1
+map_Kd  New_textures\\lava A.png
+map_d  New_textures\\lava A.png
+
+newmtl UVTex
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Bump  C:\\Users\\DH\\Desktop\\volcano\\pipes\\pipes_Low_2_UVTex_nmap.png
+map_Kd  C:\\Users\\DH\\Desktop\\volcano\\pipes\\pipes_Low_2_UVTex_color.png
+
+newmtl UVTex.002
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd Ring_Low\Ring_AO_Blender.png
+map_Bump  C:\\Users\\DH\\Desktop\\volcano\\Ring_Low\\Ring_Low_2_UVTex_nmap.png
+
+newmtl Volcano_Rock
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.240374 0.240374 0.240374
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Bump -bm 0.600000 textures\\Stahl Hulle Grün_NRM.png
+map_Kd  textures\\rocks_grey.jpg
+
+newmtl Wire
+Ns 43.137255
+Ka 1.000000 1.000000 1.000000
+Kd 0.346157 0.346157 0.346157
+Ks 0.150000 0.150000 0.150000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 0.000000
+illum 2
+map_Kd textures\gitter.png
+map_Bump  New_textures\\wire ground_nor.png
+map_d  New_textures\\wire ground_co_2.png
+
+newmtl Wire_NONE
+Ns 43.137255
+Ka 1.000000 1.000000 1.000000
+Kd 0.346157 0.346157 0.346157
+Ks 0.150000 0.150000 0.150000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 0.000000
+illum 2
+map_Bump  New_textures\\wire ground_nor.png
+map_Kd  New_textures\\wire ground_co_2.png
+map_d  New_textures\\wire ground_co_2.png
