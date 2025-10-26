@@ -250,7 +250,12 @@ numpy 2.3.4
 
 ```bash
 # Activar entorno virtual
-source venv/bin/activate
+# Activar entorno virtual (si existe). El proyecto incluye un entorno llamado `.venv`.
+# Usar `.venv` si está presente:
+#   source .venv/bin/activate
+# Si el proyecto no tiene un entorno, puede crearlo y activarlo así:
+#   python3 -m venv .venv
+#   source .venv/bin/activate
 
 # Instalación de paquetes necesarios
 pip install PyOpenGL PyGLM pygame numpy
