@@ -27,6 +27,8 @@ class Model(object):
 		# cache: texture file path -> OpenGL texture id (avoid loading duplicates)
 		self.texture_cache = {}
 
+		self.visible = True
+
 		# If autoLoadMaterials is True, load textures automatically
 		# Otherwise, user must call LoadMaterialsFromMtl() manually
 		if autoLoadMaterials:
@@ -280,6 +282,9 @@ class Model(object):
 		return textures_loaded
 
 	def Render(self):
+
+		if not self.visible:
+			return
 
 		# Render each submesh: bind its texture (if any) to texture unit 0 and draw
 		for sub in self.submeshes:
