@@ -1,4 +1,4 @@
-# GLSL
+# GLSL - Fragment Shaders
 
 fragment_shader = '''
 #version 330 core
@@ -103,11 +103,6 @@ void main()
 '''
 
 
-# ============================================================
-# NUEVOS SHADERS PARA EL LAB
-# ============================================================
-
-
 rainbow_shader = '''
 #version 330 core
 
@@ -139,7 +134,6 @@ void main()
     vec4 texColor = texture(tex0, fragTexCoords);
     
     // Crear patrón de bandas de colores usando posición del modelo
-    // Usamos la posición en espacio mundo para crear secciones
     float pattern = sin(fragPosition.x * 3.0 + time * 2.0) * 
                    cos(fragPosition.y * 2.0 + time * 1.5) * 
                    sin(fragPosition.z * 2.5 + time * 1.8);
@@ -154,7 +148,6 @@ void main()
     vec3 rainbowColor = hsv2rgb(vec3(hue, 0.8, 1.0));
     
     // Mezclar textura con color rainbow de forma no homogénea
-    // Usar el patrón para variar la intensidad del efecto
     float mixFactor = 0.6 + 0.4 * sin(pattern * 10.0 + time);
     
     vec3 finalColor = mix(texColor.rgb, rainbowColor, mixFactor) * intensity;
@@ -183,7 +176,7 @@ uniform float value;
 void main()
 {
     // Color celeste espectral
-    vec3 ghostColor = vec3(0.4, 0.8, 1.0); // Celeste/cyan
+    vec3 ghostColor = vec3(0.4, 0.8, 1.0);
     
     // Iluminación suave
     vec3 lightDir = normalize(pointLight - fragPosition.xyz);
@@ -200,7 +193,7 @@ void main()
     // Ondulación de transparencia
     float alphaWave = sin(fragPosition.y * 5.0 + time * 2.0) * 
                      cos(fragPosition.x * 4.0 + time * 1.5);
-    alphaWave = (alphaWave + 1.0) * 0.5; // Normalizar a [0,1]
+    alphaWave = (alphaWave + 1.0) * 0.5;
     
     // Transparencia base (semi-transparente)
     float baseAlpha = 0.3 + value * 0.3;
@@ -246,7 +239,6 @@ void main()
     float intensity = max(0.0, dot(fragNormal, lightDir)) + ambientLight;
     
     // Aberración cromática - separar los canales RGB
-    // Calcular offset desde el centro de la textura
     vec2 center = vec2(0.5, 0.5);
     vec2 offset = fragTexCoords - center;
     float dist = length(offset);
@@ -369,7 +361,7 @@ void main()
     
     // Combinar efectos
     vec3 finalColor = xrayColor * structure * depth;
-    finalColor += xrayColor * edge * 2.0; // Bordes muy brillantes
+    finalColor += xrayColor * edge * 2.0;
     finalColor *= pulse;
     
     // Semi-transparente

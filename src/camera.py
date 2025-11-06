@@ -1,118 +1,111 @@
 import glm
-from math import sin, cos, radians, pi
-
-class Camera(object):
-	def __init__(self, width, height):
-
-		self.screenWidth = width
-		self.screenHeight = height
-		
-		self.position = glm.vec3(0,0,0)
-
-		# Angulos de Euler
-		self.rotation = glm.vec3(0,0,0)
-
-		self.viewMatrix = None
-
-		self.CreateProjectionMatrix(60, 0.1, 1000)
-
-		self.usingLookAt = False
-		
-		# Sistema de cámara orbital
-		self.orbitTarget = glm.vec3(0, 0, 0)  # Centro al que mira
-		self.orbitRadius = 5.0  # Distancia del objetivo
-		self.orbitAngleH = 0.0  # Ángulo horizontal (azimut)
-		self.orbitAngleV = 0.0  # Ángulo vertical (elevación)
-		self.orbitMode = False  # Si está en modo orbital
-		
-		# Límites de la cámara orbital
-		self.minRadius = 1.0
-		self.maxRadius = 50.0
-		self.minElevation = -85.0  # grados
-		self.maxElevation = 85.0   # grados
+from math import sin, cos, radians
 
 
-	def Update(self):
-		# M = T * R
-		# R = pitchMat * yawMat * rollMat
-
-		if self.orbitMode:
-			# Modo orbital: calcular posición basada en ángulos y radio
-			self.UpdateOrbitalPosition()
-			self.viewMatrix = glm.lookAt(self.position, self.orbitTarget, glm.vec3(0, 1, 0))
-		elif not self.usingLookAt:
-			identity = glm.mat4(1)
-
-			translateMat = glm.translate(identity, self.position)
-
-			pitchMat = glm.rotate(identity, glm.radians(self.rotation.x), glm.vec3(1,0,0))
-			yawMat =   glm.rotate(identity, glm.radians(self.rotation.y), glm.vec3(0,1,0))
-			rollMat =  glm.rotate(identity, glm.radians(self.rotation.z), glm.vec3(0,0,1))
-
-			rotationMat = pitchMat * yawMat * rollMat
-
-			camMat = translateMat * rotationMat
-
-			self.viewMatrix = glm.inverse(camMat)
-
-		self.usingLookAt = False
-
-
-	def CreateProjectionMatrix(self, fov, nearPlane, farPlane):
-		self.projectionMatrix = glm.perspective( glm.radians(fov), self.screenWidth / self.screenHeight, nearPlane, farPlane)
-
-
-	def LookAt(self, center):
-		self.usingLookAt = True
-		self.viewMatrix = glm.lookAt(self.position, center, glm.vec3(0,1,0) )
-
-
-	def Orbit(self, center, distance, angle):
-		self.position.x = center.x + sin(radians(angle) ) * distance
-		self.position.z = center.z + cos(radians(angle) ) * distance
-
-
-	def SetOrbitMode(self, enabled, target=None):
-		"""Activa/desactiva el modo orbital de la cámara"""
-		self.orbitMode = enabled
-		if target is not None:
-			self.orbitTarget = target
-	
-	
-	def UpdateOrbitalPosition(self):
-		"""Actualiza la posición de la cámara en modo orbital basado en ángulos"""
-		# Convertir ángulos a radianes
-		angleH = radians(self.orbitAngleH)
-		angleV = radians(self.orbitAngleV)
-		
-		# Calcular posición en coordenadas esféricas
-		x = self.orbitRadius * cos(angleV) * sin(angleH)
-		y = self.orbitRadius * sin(angleV)
-		z = self.orbitRadius * cos(angleV) * cos(angleH)
-		
-		# Posición final relativa al target
-		self.position = self.orbitTarget + glm.vec3(x, y, z)
-	
-	
-	def RotateOrbitHorizontal(self, delta):
-		"""Rota la cámara horizontalmente alrededor del target"""
-		if self.orbitMode:
-			self.orbitAngleH += delta
-			# Mantener entre 0-360 grados
-			self.orbitAngleH = self.orbitAngleH % 360.0
-	
-	
-	def RotateOrbitVertical(self, delta):
-		"""Rota la cámara verticalmente alrededor del target con límites"""
-		if self.orbitMode:
-			self.orbitAngleV += delta
-			# Aplicar límites de elevación
-			self.orbitAngleV = max(self.minElevation, min(self.maxElevation, self.orbitAngleV))
-	
-	
-	def ZoomOrbit(self, delta):
-		"""Acerca o aleja la cámara del target con límites"""
-		if self.orbitMode:
-			self.orbitRadius += delta
-			# Aplicar límites de distancia
-			self.orbitRadius = max(self.minRadius, min(self.maxRadius, self.orbitRadius))
+class PerspectiveCamera:
+    """
+    Perspective camera with orbital controls and configurable projection.
+    Supports LookAt functionality and Euler angle rotations.
+    """
+    
+    def __init__(self, screen_width, screen_height):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        
+        self.position = glm.vec3(0, 0, 0)
+        self.rotation = glm.vec3(0, 0, 0)
+        
+        self._view_matrix = None
+        self._projection_matrix = None
+        self._use_lookat = False
+        
+        self.configure_projection(60, 0.1, 1000)
+    
+    def update_view_matrix(self):
+        """
+        Recalculates the view matrix based on position and rotation.
+        Uses manual matrix construction unless LookAt was called.
+        """
+        if not self._use_lookat:
+            identity_matrix = glm.mat4(1)
+            
+            # Build transformation matrices
+            translation = glm.translate(identity_matrix, self.position)
+            
+            pitch_rotation = glm.rotate(
+                identity_matrix, 
+                glm.radians(self.rotation.x), 
+                glm.vec3(1, 0, 0)
+            )
+            yaw_rotation = glm.rotate(
+                identity_matrix, 
+                glm.radians(self.rotation.y), 
+                glm.vec3(0, 1, 0)
+            )
+            roll_rotation = glm.rotate(
+                identity_matrix, 
+                glm.radians(self.rotation.z), 
+                glm.vec3(0, 0, 1)
+            )
+            
+            rotation_matrix = pitch_rotation * yaw_rotation * roll_rotation
+            camera_transform = translation * rotation_matrix
+            
+            self._view_matrix = glm.inverse(camera_transform)
+        
+        self._use_lookat = False
+    
+    def configure_projection(self, fov_degrees, near_clip, far_clip):
+        """
+        Sets up the perspective projection matrix.
+        
+        Args:
+            fov_degrees: Field of view in degrees
+            near_clip: Near clipping plane distance
+            far_clip: Far clipping plane distance
+        """
+        aspect_ratio = self.screen_width / self.screen_height
+        self._projection_matrix = glm.perspective(
+            glm.radians(fov_degrees), 
+            aspect_ratio, 
+            near_clip, 
+            far_clip
+        )
+    
+    def look_at_target(self, target_position):
+        """
+        Makes the camera look at a specific point in 3D space.
+        
+        Args:
+            target_position: The 3D point to look at
+        """
+        self._use_lookat = True
+        up_vector = glm.vec3(0, 1, 0)
+        self._view_matrix = glm.lookAt(
+            self.position, 
+            target_position, 
+            up_vector
+        )
+    
+    def set_orbital_position(self, center, radius, angle_degrees):
+        """
+        Positions the camera in an orbit around a center point.
+        
+        Args:
+            center: Center point of orbit
+            radius: Distance from center
+            angle_degrees: Angle around the Y-axis in degrees
+        """
+        angle_rad = radians(angle_degrees)
+        self.position.x = center.x + sin(angle_rad) * radius
+        self.position.z = center.z + cos(angle_rad) * radius
+    
+    @property
+    def view_matrix(self):
+        """Returns the current view matrix."""
+        return self._view_matrix
+    
+    @property
+    def projection_matrix(self):
+        """Returns the current projection matrix."""
+        return self._projection_matrix

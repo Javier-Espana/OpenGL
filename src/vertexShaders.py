@@ -1,5 +1,7 @@
 
 
+# GLSL - Vertex Shaders
+
 vertex_shader = '''
 #version 330 core
 
@@ -96,11 +98,6 @@ void main()
 '''
 
 
-# ============================================================
-# NUEVOS VERTEX SHADERS PARA EL LAB
-# ============================================================
-
-
 twist_shader = '''
 #version 330 core
 
@@ -173,13 +170,12 @@ uniform float value;
 void main()
 {
     // Desplazar vértices a lo largo de la normal
-    // Crear un efecto pulsante
     float pulse = sin(time * 2.0) * 0.5 + 0.5;
     float explosion = value * pulse;
     
-    // Añadir variación basada en posición para que no sea uniforme
+    // Añadir variación basada en posición
     float variation = sin(inPosition.x * 10.0) * cos(inPosition.y * 10.0) * sin(inPosition.z * 10.0);
-    variation = variation * 0.3 + 0.7; // Normalizar a [0.4, 1.0]
+    variation = variation * 0.3 + 0.7;
     
     vec3 exploded = inPosition + inNormals * explosion * variation;
     
@@ -218,7 +214,6 @@ void main()
     float wave2 = cos(inPosition.x * 4.0 + time * 1.5) * value * 0.2;
     float wave3 = sin(inPosition.z * 2.0 + time * 1.8) * value * 0.25;
     
-    // Ondulación en diferentes direcciones
     vec3 distortion = vec3(
         wave2 + wave3 * 0.5,
         wave1,
@@ -229,7 +224,7 @@ void main()
     float floating = sin(time * 1.5 + inPosition.x * 0.5) * value * 0.4;
     distortion.y += floating;
     
-    // Añadir perturbación a las normales para efecto más espectral
+    // Añadir perturbación a las normales
     vec3 perturbedNormal = inNormals + vec3(
         sin(time * 3.0 + inPosition.y) * 0.1,
         cos(time * 2.5 + inPosition.x) * 0.1,
@@ -272,7 +267,7 @@ void main()
     vec3 center = vec3(0.0, 0.0, 0.0);
     float dist = distance(inPosition.xz, center.xz);
     
-    // Crear ondas que se expanden desde el centro
+    // Crear ondas que se expanden
     float wave = sin(dist * 5.0 - time * 3.0) * value * 0.5;
     
     // Atenuación con la distancia
@@ -316,7 +311,7 @@ void main()
                           cos(inPosition.y * 12.0 + time * 0.8) * 
                           sin(inPosition.z * 18.0 + time * 1.2));
     
-    spike = pow(spike, 3.0); // Hacer picos más pronunciados
+    spike = pow(spike, 3.0);
     
     vec3 spiked = inPosition + inNormals * spike * value;
     

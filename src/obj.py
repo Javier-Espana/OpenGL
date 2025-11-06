@@ -1,62 +1,61 @@
 
-class Obj(object):
-	def __init__(self, filename):
-		# Asumiendo que el archivo es un formato .obj
-		with open(filename, "r") as file:
-			lines = file.read().splitlines()
-			
-		self.vertices = []
-		self.texCoords = []
-		self.normals = []
-		self.faces = []
-		# Name of the referenced material library file (mtllib)
-		self.mtllib = None
-		# Per-face material name (from usemtl) aligned with self.faces
-		self.face_materials = []
-		
-		current_material = None
-
-		for line in lines:
-			# Si la linea no cuenta con un prefijo y un valor,
-			# seguimos a la siguiente la linea
-
-			line = line.rstrip()
-
-			try:
-				prefix, value = line.split(" ", 1)
-			except:
-				continue
-			
-			# Dependiendo del prefijo, parseamos y guardamos
-			# la informacion en el contenedor correcto
-			
-			if prefix == "v": # Vertices
-				vert = list(map(float,value.split(" ")))
-				self.vertices.append(vert)
-				
-			elif prefix == "vt": # Coordenadas de textura
-				vts = list(map(float,value.split(" ")))
-				self.texCoords.append([vts[0],vts[1]])
-				
-			elif prefix == "vn": # Normales
-				norm = list(map(float,value.split(" ")))
-				self.normals.append(norm)
-				
-			elif prefix == "mtllib":
-				# referenced material library filename
-				# value may contain extra spaces, strip
-				self.mtllib = value.strip()
-
-			elif prefix == "usemtl":
-				# the material used for subsequent faces
-				current_material = value.strip()
-
-			elif prefix == "f": # Caras
-				face = []
-				verts = value.split(" ")
-				for vert in verts:
-					vert = list(map(int, vert.split("/")))
-					face.append(vert)
-				self.faces.append(face)
-				# record current material for this face (may be None)
-				self.face_materials.append(current_material)
+class ObjFileParser:
+    """
+    Parser for Wavefront OBJ 3D model files.
+    Extracts vertices, texture coordinates, normals, and face definitions.
+    """
+    
+    def __init__(self, filepath):
+        self.vertices = []
+        self.texCoords = []
+        self.normals = []
+        self.faces = []
+        
+        self._parse_file(filepath)
+    
+    def _parse_file(self, filepath):
+        """Reads and parses the OBJ file line by line."""
+        with open(filepath, "r") as file:
+            for line in file:
+                line = line.strip()
+                
+                if not line or line.startswith('#'):
+                    continue
+                
+                parts = line.split(None, 1)
+                if len(parts) < 2:
+                    continue
+                
+                prefix, data = parts
+                
+                if prefix == "v":
+                    self._parse_vertex(data)
+                elif prefix == "vt":
+                    self._parse_texcoord(data)
+                elif prefix == "vn":
+                    self._parse_normal(data)
+                elif prefix == "f":
+                    self._parse_face(data)
+    
+    def _parse_vertex(self, data):
+        """Parses vertex position data."""
+        coords = list(map(float, data.split()))
+        self.vertices.append(coords)
+    
+    def _parse_texcoord(self, data):
+        """Parses texture coordinate data."""
+        coords = list(map(float, data.split()))
+        self.texCoords.append([coords[0], coords[1]])
+    
+    def _parse_normal(self, data):
+        """Parses normal vector data."""
+        coords = list(map(float, data.split()))
+        self.normals.append(coords)
+    
+    def _parse_face(self, data):
+        """Parses face indices data."""
+        face_vertices = []
+        for vertex_str in data.split():
+            indices = list(map(int, vertex_str.split("/")))
+            face_vertices.append(indices)
+        self.faces.append(face_vertices)                                                                                                                                                                                                                                                                                                                                                                                           
