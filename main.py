@@ -18,7 +18,7 @@ from src.postProcessingShaders import *
 # Window configuration
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 540
-
+##
 
 def clamp(value, min_val, max_val):
     """Clamps a value between min and max."""
