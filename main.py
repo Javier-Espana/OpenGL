@@ -233,7 +233,9 @@ def load_models():
         rotation=(0, 60, 0),
         scale=(0.8, 0.8, 0.8),
         name="tree2",
-        visible=True
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
     )
 
 
@@ -246,7 +248,8 @@ def load_models():
         rotation=(0, 30, 0),
         scale=(0.6, 0.6, 0.6),
         name="plant_bush_1",
-        visible=True
+        visible=True,
+        fragment_shader=foliage_shader
     )
 
     add_model(
@@ -256,7 +259,8 @@ def load_models():
         rotation=(0, -45, 0),
         scale=(0.55, 0.55, 0.55),
         name="plant_bush_2",
-        visible=True
+        visible=True,
+        fragment_shader=foliage_shader
     )
 
     add_model(
@@ -266,7 +270,8 @@ def load_models():
         rotation=(0, 60, 0),
         scale=(0.5, 0.5, 0.5),
         name="plant_bush_3",
-        visible=True
+        visible=True,
+        fragment_shader=foliage_shader
     )
 
 
@@ -279,7 +284,8 @@ def load_models():
         rotation=(0, 90, 0),
         scale=(0.65, 0.65, 0.65),
         name="plant_bush_4",
-        visible=True
+        visible=True,
+        fragment_shader=foliage_shader
     )
 
     add_model(
@@ -289,7 +295,101 @@ def load_models():
         rotation=(0, -90, 0),
         scale=(0.6, 0.6, 0.6),
         name="plant_bush_5",
-        visible=True
+        visible=True,
+        fragment_shader=foliage_shader
+    )
+
+    # === ADDITIONAL TREES - Creating a small forest ===
+    
+    # Tree3 - Behind cottage (background left)
+    add_model(
+        "models/Tree/Tree.obj",
+        texture_path="models/Tree/bark_0021.jpg",
+        position=(-18, 0, -18),
+        rotation=(0, 45, 0),
+        scale=(1.4, 1.4, 1.4),
+        name="tree3",
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
+    )
+
+    # Tree4 - Right background corner
+    add_model(
+        "models/Tree2/Tree1.obj",
+        texture_path="models/Tree2/BarkDecidious0143_5_S.jpg",
+        position=(18, 0, -15),
+        rotation=(0, -60, 0),
+        scale=(0.9, 0.9, 0.9),
+        name="tree4",
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
+    )
+
+    # Tree5 - Far left side
+    add_model(
+        "models/Tree/Tree.obj",
+        texture_path="models/Tree/bark_0021.jpg",
+        position=(-20, 0, -5),
+        rotation=(0, 120, 0),
+        scale=(1.3, 1.3, 1.3),
+        name="tree5",
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
+    )
+
+    # Tree6 - Right side near edge
+    add_model(
+        "models/Tree2/Tree1.obj",
+        texture_path="models/Tree2/BarkDecidious0194_7_S.jpg",
+        position=(20, 0, -8),
+        rotation=(0, -140, 0),
+        scale=(0.75, 0.75, 0.75),
+        name="tree6",
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
+    )
+
+    # Tree7 - Behind cottage center
+    add_model(
+        "models/Tree/Tree.obj",
+        texture_path="models/Tree/bark_0021.jpg",
+        position=(0, 0, -22),
+        rotation=(0, 0, 0),
+        scale=(1.5, 1.5, 1.5),
+        name="tree7",
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
+    )
+
+    # Tree8 - Mid-left area
+    add_model(
+        "models/Tree2/Tree1.obj",
+        texture_path="models/Tree2/BarkDecidious0143_5_S.jpg",
+        position=(-15, 0, -3),
+        rotation=(0, 75, 0),
+        scale=(0.85, 0.85, 0.85),
+        name="tree8",
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
+    )
+
+    # Tree9 - Far right background
+    add_model(
+        "models/Tree/Tree.obj",
+        texture_path="models/Tree/bark_0021.jpg",
+        position=(22, 0, -20),
+        rotation=(0, -45, 0),
+        scale=(1.2, 1.2, 1.2),
+        name="tree9",
+        visible=True,
+        vertex_shader=tree_sway_shader,
+        fragment_shader=bark_shader
     )
 
     return models

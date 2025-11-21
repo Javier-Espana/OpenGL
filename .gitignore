@@ -23,6 +23,11 @@ env/
 Thumbs.db
 desktop.ini
 
+# Maya/Blender cache files
+.mayaSwatches/
+*.blend
+*.blend1
+
 # Temporary files
 *.tmp
 *.temp
