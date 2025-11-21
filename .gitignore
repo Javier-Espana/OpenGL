@@ -1,24 +1,36 @@
-# Python
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
-.venv
+*.pyc
+*.pyo
 
-# IDEs
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE specific files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# OS specific files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Project specific
+# Temporary files
+*.tmp
+*.temp
 *.log
+*.bak
+*.orig
+
+# Compiled files
+*.so
+*.dylib
+*.dll

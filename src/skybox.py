@@ -113,6 +113,15 @@ class EnvironmentMap:
         
         for i, texture_path in enumerate(texture_paths):
             texture_surface = pygame.image.load(texture_path)
+            
+            # Cubemap faces must be square - resize if needed
+            width = texture_surface.get_width()
+            height = texture_surface.get_height()
+            if width != height:
+                # Use the larger dimension to avoid quality loss
+                size = max(width, height)
+                texture_surface = pygame.transform.scale(texture_surface, (size, size))
+            
             texture_data = pygame.image.tostring(texture_surface, "RGB", False)
             
             glTexImage2D(

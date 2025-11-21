@@ -23,12 +23,22 @@ class Mesh3D:
         self.is_visible = True
         self._texture_ids = []
         self._vertex_count = 0
-        
+        # By default models are static (no automatic time-based animation)
+        # Set this to True if you want shader 'time' uniforms to be driven.
+        self.animated = False
+
+        # Per-object shader programs
+        self.shader_program = None  # Compiled vertex+fragment program for this mesh
+        self.postprocess_program = None  # Optional post-process program
+        self._fbo_id = None
+        self._color_tex = None
+        self._depth_tex = None
+
         # Vertex buffer objects
         self._position_vbo = None
         self._texcoord_vbo = None
         self._normal_vbo = None
-        
+
         self._initialize_buffers()
     
     def compute_model_matrix(self):
@@ -151,6 +161,61 @@ class Mesh3D:
         glGenerateMipmap(GL_TEXTURE_2D)
         
         self._texture_ids.append(texture_id)
+
+    # ---------------- Per-object shaders -----------------
+    def set_shaders(self, vertex_src, fragment_src):
+        """Compiles and assigns a dedicated shader program to this mesh."""
+        if vertex_src and fragment_src:
+            try:
+                from OpenGL.GL.shaders import compileProgram, compileShader
+                self.shader_program = compileProgram(
+                    compileShader(vertex_src, GL_VERTEX_SHADER),
+                    compileShader(fragment_src, GL_FRAGMENT_SHADER)
+                )
+            except Exception as e:
+                print(f"[error] Failed compiling mesh shaders: {e}")
+                self.shader_program = None
+        else:
+            self.shader_program = None
+
+    def set_postprocess_shaders(self, viewport_width, viewport_height, vertex_src, fragment_src):
+        """Creates per-object post-process program and FBO if sources provided."""
+        if not (vertex_src and fragment_src):
+            self.postprocess_program = None
+            return
+        try:
+            from OpenGL.GL.shaders import compileProgram, compileShader
+            self.postprocess_program = compileProgram(
+                compileShader(vertex_src, GL_VERTEX_SHADER),
+                compileShader(fragment_src, GL_FRAGMENT_SHADER)
+            )
+        except Exception as e:
+            print(f"[error] Failed compiling postprocess shaders: {e}")
+            self.postprocess_program = None
+            return
+
+        # Create per-mesh FBO if not exists
+        if self._fbo_id is None:
+            self._fbo_id = glGenFramebuffers(1)
+            glBindFramebuffer(GL_FRAMEBUFFER, self._fbo_id)
+            # Color tex
+            self._color_tex = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, self._color_tex)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, viewport_width, viewport_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self._color_tex, 0)
+            # Depth tex
+            self._depth_tex = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, self._depth_tex)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, viewport_width, viewport_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, None)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self._depth_tex, 0)
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
+
+    def has_postprocess(self):
+        return self.postprocess_program is not None and self._fbo_id is not None
     
     def draw(self):
         """

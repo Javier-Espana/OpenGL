@@ -56,6 +56,10 @@ class ObjFileParser:
         """Parses face indices data."""
         face_vertices = []
         for vertex_str in data.split():
-            indices = list(map(int, vertex_str.split("/")))
+            # Handle cases like "1//1" (vertex//normal) or "1/1/1" (vertex/texture/normal)
+            parts = vertex_str.split("/")
+            indices = []
+            for part in parts:
+                indices.append(int(part) if part else 0)
             face_vertices.append(indices)
         self.faces.append(face_vertices)                                                                                                                                                                                                                                                                                                                                                                                           

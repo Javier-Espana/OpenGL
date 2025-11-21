@@ -46,11 +46,8 @@ El proyecto incluye tres modelos 3D con sus respectivas texturas:
 
 ## Controles
 
-### Selección de Modelos
-- **Numpad 1** - Mario
-- **Numpad 2** - Creature
-- **Numpad 3** - Stone
-- **Clic Derecho** - Siguiente modelo
+### Modelos Simultáneos
+Los tres modelos (Mario, Creature y Stone) se cargan y renderizan al mismo tiempo. Ya no existe selección individual; todos permanecen visibles simultáneamente.
 
 ### Cámara Orbital
 - **Flechas Izquierda/Derecha** - Rotación horizontal (azimuth)
@@ -59,7 +56,7 @@ El proyecto incluye tres modelos 3D con sus respectivas texturas:
 - **Rueda del Mouse** - Zoom in/out
 - **Espacio** - Activar/Desactivar órbita automática
 
-*La cámara orbita automáticamente alrededor del modelo seleccionado por defecto. Usa Espacio para pausar/reanudar la órbita automática.*
+*La cámara orbita automáticamente alrededor del grupo de modelos (centro compartido). Usa Espacio para pausar/reanudar la órbita automática.*
 
 ### Fragment Shaders
 - **1-6** - Standard, Toon, Negative, Magma, Rainbow, Ghost

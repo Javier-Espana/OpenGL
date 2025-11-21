@@ -227,3 +227,155 @@ void main() {
     }
 }
 '''
+
+
+# Post-procesamiento de ambiente natural - TINTE VERDE MÁGICO dramático
+nature_ambient_postProcess = '''
+#version 430
+
+in vec2 fragTexCoords;
+
+uniform sampler2D frameBuffer;
+uniform float time;
+
+out vec4 fragColor;
+
+void main() {
+    vec4 color = texture(frameBuffer, fragTexCoords);
+    
+    // Añadir tinte verde INTENSO para ambiente mágico/fantástico
+    color.g *= 1.4;
+    color.r *= 0.85;
+    color.b *= 0.9;
+    
+    // Viñeta FUERTE
+    vec2 uv = fragTexCoords * 2.0 - 1.0;
+    float vignette = 1.0 - dot(uv, uv) * 0.5;
+    vignette = pow(vignette, 0.8);
+    color.rgb *= vignette;
+    
+    // Bloom EXTREMO en áreas brillantes
+    float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    if(brightness > 0.5) {
+        color.rgb *= (1.0 + (brightness - 0.5) * 1.0);
+    }
+    
+    // Añadir brillo ambiental verde
+    color.rgb += vec3(0.05, 0.15, 0.02);
+    
+    fragColor = color;
+}
+'''
+
+
+# Post-procesamiento de bruma - NIEBLA AZUL DENSA
+depth_fog_postProcess = '''
+#version 430
+
+in vec2 fragTexCoords;
+
+uniform sampler2D frameBuffer;
+uniform sampler2D depthTexture;
+uniform float time;
+
+out vec4 fragColor;
+
+void main() {
+    vec4 color = texture(frameBuffer, fragTexCoords);
+    float depth = texture(depthTexture, fragTexCoords).r;
+    
+    // Convertir profundidad a distancia - MÁS AGRESIVO
+    depth = pow(depth, 4.0);
+    
+    // Color de la bruma AZUL INTENSO
+    vec3 fogColor = vec3(0.4, 0.5, 0.8);
+    
+    // Mezclar con fog MUCHO más fuerte
+    float fogAmount = clamp(depth * 1.5, 0.0, 0.9);
+    color.rgb = mix(color.rgb, fogColor, fogAmount);
+    
+    // Añadir tinte azul general
+    color.b *= 1.2;
+    
+    fragColor = color;
+}
+'''
+
+
+# Post-procesamiento de día soleado - SATURACIÓN EXTREMA y BRILLO
+sunny_day_postProcess = '''
+#version 430
+
+in vec2 fragTexCoords;
+
+uniform sampler2D frameBuffer;
+uniform float time;
+
+out vec4 fragColor;
+
+void main() {
+    vec4 color = texture(frameBuffer, fragTexCoords);
+    
+    // Aumentar brillo DRAMÁTICO
+    color.rgb *= 1.5;
+    
+    // Aumentar saturación EXTREMA
+    float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = mix(vec3(gray), color.rgb, 2.0);
+    
+    // Aumentar contraste FUERTE
+    color.rgb = (color.rgb - 0.5) * 1.6 + 0.5;
+    
+    // Tinte amarillo cálido INTENSO
+    color.r *= 1.2;
+    color.g *= 1.15;
+    color.b *= 0.85;
+    
+    // Brillo adicional en el centro
+    vec2 center = fragTexCoords - 0.5;
+    float centerGlow = 1.0 - length(center) * 0.8;
+    color.rgb *= (0.8 + centerGlow * 0.4);
+    
+    fragColor = color;
+}
+'''
+
+
+# Post-procesamiento de atardecer - NARANJA/ROJO ARDIENTE dramático
+sunset_postProcess = '''
+#version 430
+
+in vec2 fragTexCoords;
+
+uniform sampler2D frameBuffer;
+uniform float time;
+
+out vec4 fragColor;
+
+void main() {
+    vec4 color = texture(frameBuffer, fragTexCoords);
+    
+    // Añadir tonos naranjas/rojos EXTREMOS
+    color.r *= 1.8;
+    color.g *= 1.1;
+    color.b *= 0.5;
+    
+    // Viñeta MUY pronunciada - casi negra en los bordes
+    vec2 uv = fragTexCoords * 2.0 - 1.0;
+    float vignette = 1.0 - dot(uv, uv) * 0.7;
+    vignette = pow(vignette, 0.5);
+    color.rgb *= vignette;
+    
+    // Aumentar calidez EXTREMA en áreas brillantes
+    float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    if(brightness > 0.3) {
+        color.r *= (1.0 + (brightness - 0.3) * 0.8);
+        color.g *= (1.0 + (brightness - 0.3) * 0.4);
+    }
+    
+    // Añadir brillo dorado
+    color.rgb += vec3(0.15, 0.08, 0.0) * brightness;
+    
+    fragColor = color;
+}
+'''

@@ -323,3 +323,148 @@ void main()
 }
 
 '''
+
+
+# Shader de viento para la grama - crea movimiento ondulante DRAMÁTICO como si el viento soplara fuerte
+wind_grass_shader = '''
+#version 330
+
+layout (location = 0) in vec3 inPosition;
+layout (location = 1) in vec2 inTexCoords;
+layout (location = 2) in vec3 inNormals;
+
+out vec4 fragPosition;
+out vec2 fragTexCoords;
+out vec3 fragNormal;
+
+uniform mat4 modelMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
+
+uniform float time;
+uniform float value;
+
+void main()
+{
+    // Movimiento de viento FUERTE - múltiples ondas combinadas
+    float wave1 = sin(time * 2.0 + inPosition.x * 5.0) * 0.4;
+    float wave2 = cos(time * 1.5 + inPosition.z * 5.0) * 0.3;
+    float wave3 = sin(time * 3.0 + (inPosition.x + inPosition.z) * 3.0) * 0.2;
+    
+    float windWave = wave1 + wave2 + wave3;
+    
+    // Solo afectar las partes superiores (Y positiva) - MÁS INTENSO
+    float heightFactor = clamp(inPosition.y * 0.8 + 0.5, 0.0, 1.0);
+    heightFactor = pow(heightFactor, 1.5); // Hacer el efecto más pronunciado en las puntas
+    
+    vec3 offset = vec3(
+        windWave * (value + 0.5) * heightFactor * 0.8,  // MÁS movimiento horizontal
+        abs(windWave) * (value + 0.3) * heightFactor * 0.3,  // Movimiento vertical
+        windWave * (value + 0.5) * heightFactor * 0.6
+    );
+    
+    vec3 windPosition = inPosition + offset;
+    
+    fragPosition = modelMatrix * vec4(windPosition, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * fragPosition;
+    
+    // Normal también se deforma ligeramente
+    vec3 deformedNormal = inNormals + vec3(windWave * 0.2, 0.0, windWave * 0.2);
+    fragNormal = normalize(vec3(modelMatrix * vec4(deformedNormal, 0.0)));
+    fragTexCoords = inTexCoords;
+}
+
+'''
+
+
+# Shader para árboles - BALANCEO FUERTE y visible del tronco
+tree_sway_shader = '''
+#version 330
+
+layout (location = 0) in vec3 inPosition;
+layout (location = 1) in vec2 inTexCoords;
+layout (location = 2) in vec3 inNormals;
+
+out vec4 fragPosition;
+out vec2 fragTexCoords;
+out vec3 fragNormal;
+
+uniform mat4 modelMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
+
+uniform float time;
+uniform float value;
+
+void main()
+{
+    // Balanceo FUERTE del árbol - como un péndulo
+    float sway = sin(time * 1.2) * 0.7 + cos(time * 0.8) * 0.5;
+    float microSway = sin(time * 4.0) * 0.15; // Pequeñas vibraciones
+    
+    // MUCHO más movimiento en las partes altas
+    float heightFactor = pow(max(0.0, inPosition.y) * 0.2, 1.2);
+    
+    vec3 offset = vec3(
+        (sway + microSway) * (value + 0.8) * heightFactor,
+        0.0,
+        (sway * 0.7 + microSway * 0.5) * (value + 0.8) * heightFactor
+    );
+    
+    vec3 swayPosition = inPosition + offset;
+    
+    fragPosition = modelMatrix * vec4(swayPosition, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * fragPosition;
+    
+    fragNormal = normalize(vec3(modelMatrix * vec4(inNormals, 0.0)));
+    fragTexCoords = inTexCoords;
+}
+
+'''
+
+
+# Shader para palmeras - movimiento EXTREMO y circular de las hojas
+palm_wave_shader = '''
+#version 330
+
+layout (location = 0) in vec3 inPosition;
+layout (location = 1) in vec2 inTexCoords;
+layout (location = 2) in vec3 inNormals;
+
+out vec4 fragPosition;
+out vec2 fragTexCoords;
+out vec3 fragNormal;
+
+uniform mat4 modelMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
+
+uniform float time;
+uniform float value;
+
+void main()
+{
+    // Movimiento circular DRAMÁTICO para hojas de palmera
+    float circleWave = sin(time * 1.5 + inPosition.x * 2.0) * 
+                       cos(time * 1.2 + inPosition.z * 2.0);
+    float spiral = sin(time * 2.0 + length(inPosition.xz) * 3.0) * 0.4;
+    
+    // MAYOR movimiento en las partes altas (hojas)
+    float heightFactor = pow(max(0.0, inPosition.y) * 0.25, 1.0);
+    
+    vec3 offset = vec3(
+        (circleWave + spiral) * (value + 1.0) * heightFactor * 1.2,  // MUCHO movimiento
+        abs(circleWave) * (value + 0.6) * heightFactor * 0.5,        // Movimiento vertical
+        (circleWave * 0.8 - spiral) * (value + 1.0) * heightFactor * 1.0
+    );
+    
+    vec3 palmPosition = inPosition + offset;
+    
+    fragPosition = modelMatrix * vec4(palmPosition, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * fragPosition;
+    
+    fragNormal = normalize(vec3(modelMatrix * vec4(inNormals, 0.0)));
+    fragTexCoords = inTexCoords;
+}
+
+'''

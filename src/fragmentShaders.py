@@ -10,15 +10,56 @@ in vec4 fragPosition;
 out vec4 fragColor;
 
 uniform sampler2D tex0;
-uniform vec3 pointLight;
-uniform float ambientLight;
+
+// Lighting uniforms
+uniform float ambientIntensity;
+uniform vec3 ambientColor;
+
+// Directional lights (max 4)
+uniform int numDirLights;
+uniform vec3 dirLightDirections[4];
+uniform vec3 dirLightColors[4];
+uniform float dirLightIntensities[4];
+
+// Point lights (max 4)
+uniform int numPointLights;
+uniform vec3 pointLightPositions[4];
+uniform vec3 pointLightColors[4];
+uniform float pointLightIntensities[4];
 
 void main()
 {
-    vec3 lightDir = normalize(pointLight - fragPosition.xyz);
-    float intensity = max( 0 , dot(fragNormal, lightDir)) + ambientLight;
-
-    fragColor = texture(tex0, fragTexCoords) * intensity;
+    vec3 normal = normalize(fragNormal);
+    vec3 finalColor = vec3(0.0);
+    
+    // Ambient light
+    finalColor += ambientColor * ambientIntensity;
+    
+    // Directional lights
+    for(int i = 0; i < numDirLights && i < 4; i++)
+    {
+        vec3 lightDir = normalize(-dirLightDirections[i]);
+        float diff = max(dot(normal, lightDir), 0.0);
+        finalColor += dirLightColors[i] * diff * dirLightIntensities[i];
+    }
+    
+    // Point lights
+    for(int i = 0; i < numPointLights && i < 4; i++)
+    {
+        vec3 lightDir = normalize(pointLightPositions[i] - fragPosition.xyz);
+        float diff = max(dot(normal, lightDir), 0.0);
+        
+        // Attenuation
+        float distance = length(pointLightPositions[i] - fragPosition.xyz);
+        float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * distance * distance);
+        
+        finalColor += pointLightColors[i] * diff * pointLightIntensities[i] * attenuation;
+    }
+    
+    // Clamp to avoid over-brightness
+    finalColor = min(finalColor, vec3(1.5));
+    
+    fragColor = texture(tex0, fragTexCoords) * vec4(finalColor, 1.0);
 }
 
 '''
@@ -36,20 +77,32 @@ out vec4 fragColor;
 uniform sampler2D tex0;
 uniform vec3 pointLight;
 uniform float ambientLight;
+uniform vec3 sunDirection;
+uniform vec3 sunColor;
+uniform float sunIntensity;
 
 void main()
 {
+    // Point light calculation
     vec3 lightDir = normalize(pointLight - fragPosition.xyz);
-    float intensity = max( 0 , dot(fragNormal, lightDir)) + ambientLight;
-
-    if (intensity < 0.33)
-        intensity = 0.2;
-    else if (intensity < 0.66)
-        intensity = 0.6;
+    float pointIntensity = max(0.0, dot(fragNormal, lightDir));
+    
+    // Directional sun light calculation
+    vec3 sunDir = normalize(-sunDirection);
+    float sunDiffuse = max(0.0, dot(fragNormal, sunDir));
+    
+    // Combine lighting
+    float totalIntensity = ambientLight + pointIntensity * 0.3 + sunDiffuse * sunIntensity;
+    
+    // Toon shading quantization
+    if (totalIntensity < 0.33)
+        totalIntensity = 0.2;
+    else if (totalIntensity < 0.66)
+        totalIntensity = 0.6;
     else
-        intensity = 1.0;
+        totalIntensity = 1.0;
 
-    fragColor = texture(tex0, fragTexCoords) * intensity;
+    fragColor = texture(tex0, fragTexCoords) * totalIntensity;
 }
 
 '''
@@ -372,6 +425,313 @@ void main()
 }
 
 '''
+
+
+# Shader temático para árboles - CORTEZA OSCURA con grietas profundas
+bark_shader = '''
+#version 330 core
+
+in vec2 fragTexCoords;
+in vec3 fragNormal;
+in vec4 fragPosition;
+
+out vec4 fragColor;
+
+uniform sampler2D tex0;
+
+// Luces
+uniform vec3 ambientLightColor;
+uniform float ambientLightIntensity;
+
+#define MAX_DIR_LIGHTS 4
+uniform int numDirLights;
+uniform vec3 dirLightDirections[MAX_DIR_LIGHTS];
+uniform vec3 dirLightColors[MAX_DIR_LIGHTS];
+uniform float dirLightIntensities[MAX_DIR_LIGHTS];
+
+#define MAX_POINT_LIGHTS 4
+uniform int numPointLights;
+uniform vec3 pointLightPositions[MAX_POINT_LIGHTS];
+uniform vec3 pointLightColors[MAX_POINT_LIGHTS];
+uniform float pointLightIntensities[MAX_POINT_LIGHTS];
+
+uniform float time;
+uniform float value;
+
+void main()
+{
+    vec4 texColor = texture(tex0, fragTexCoords);
+    
+    // Oscurecer MUCHO la corteza para que se vea dramático
+    vec3 barkColor = texColor.rgb * 0.4;
+    
+    // Añadir grietas profundas con noise procedural
+    float crack = sin(fragTexCoords.y * 80.0 + fragTexCoords.x * 50.0);
+    crack = pow(abs(crack), 4.0);
+    barkColor *= (0.6 + crack * 0.4);
+    
+    // Tonos marrones INTENSOS
+    barkColor.r *= 1.3;
+    barkColor.g *= 0.9;
+    barkColor.b *= 0.5;
+    
+    // Iluminación básica
+    vec3 normal = normalize(fragNormal);
+    vec3 lighting = ambientLightColor * ambientLightIntensity * 0.8;
+    
+    // Luces direccionales con contraste ALTO
+    for(int i = 0; i < numDirLights && i < MAX_DIR_LIGHTS; i++) {
+        vec3 lightDir = normalize(-dirLightDirections[i]);
+        float diff = max(dot(normal, lightDir), 0.0);
+        diff = pow(diff, 2.0); // Contraste más fuerte
+        lighting += dirLightColors[i] * diff * dirLightIntensities[i];
+    }
+    
+    // Luces puntuales
+    for(int i = 0; i < numPointLights && i < MAX_POINT_LIGHTS; i++) {
+        vec3 lightDir = normalize(pointLightPositions[i] - fragPosition.xyz);
+        float distance = length(pointLightPositions[i] - fragPosition.xyz);
+        float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * distance * distance);
+        float diff = max(dot(normal, lightDir), 0.0);
+        lighting += pointLightColors[i] * diff * pointLightIntensities[i] * attenuation;
+    }
+    
+    vec3 finalColor = barkColor * lighting;
+    fragColor = vec4(finalColor, texColor.a);
+}
+
+'''
+
+
+# Shader temático para hojas - VERDE BRILLANTE con efecto de translucidez EXTREMO
+foliage_shader = '''
+#version 330 core
+
+in vec2 fragTexCoords;
+in vec3 fragNormal;
+in vec4 fragPosition;
+
+out vec4 fragColor;
+
+uniform sampler2D tex0;
+
+// Luces
+uniform vec3 ambientLightColor;
+uniform float ambientLightIntensity;
+
+#define MAX_DIR_LIGHTS 4
+uniform int numDirLights;
+uniform vec3 dirLightDirections[MAX_DIR_LIGHTS];
+uniform vec3 dirLightColors[MAX_DIR_LIGHTS];
+uniform float dirLightIntensities[MAX_DIR_LIGHTS];
+
+#define MAX_POINT_LIGHTS 4
+uniform int numPointLights;
+uniform vec3 pointLightPositions[MAX_POINT_LIGHTS];
+uniform vec3 pointLightColors[MAX_POINT_LIGHTS];
+uniform float pointLightIntensities[MAX_POINT_LIGHTS];
+
+uniform float time;
+uniform float value;
+
+void main()
+{
+    vec4 texColor = texture(tex0, fragTexCoords);
+    
+    // Realzar el verde de forma EXTREMA - casi fosforescente
+    vec3 leafColor = texColor.rgb;
+    leafColor.g = min(leafColor.g * 2.0, 1.0);
+    leafColor.r *= 0.5; // Menos rojo
+    leafColor.b *= 0.7; // Menos azul
+    
+    // Añadir brillo verde intenso
+    leafColor += vec3(0.1, 0.3, 0.05);
+    
+    // Iluminación
+    vec3 normal = normalize(fragNormal);
+    vec3 lighting = ambientLightColor * ambientLightIntensity;
+    
+    // Luces direccionales con subsurface scattering EXTREMO
+    for(int i = 0; i < numDirLights && i < MAX_DIR_LIGHTS; i++) {
+        vec3 lightDir = normalize(-dirLightDirections[i]);
+        float frontLight = max(dot(normal, lightDir), 0.0);
+        
+        // Simular luz atravesando las hojas (backlight) MUCHO MÁS FUERTE
+        float backLight = max(dot(-normal, lightDir), 0.0) * 1.5;
+        
+        lighting += dirLightColors[i] * (frontLight + backLight) * dirLightIntensities[i] * 1.3;
+    }
+    
+    // Luces puntuales más intensas
+    for(int i = 0; i < numPointLights && i < MAX_POINT_LIGHTS; i++) {
+        vec3 lightDir = normalize(pointLightPositions[i] - fragPosition.xyz);
+        float distance = length(pointLightPositions[i] - fragPosition.xyz);
+        float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * distance * distance);
+        float diff = max(dot(normal, lightDir), 0.0);
+        lighting += pointLightColors[i] * diff * pointLightIntensities[i] * attenuation * 1.5;
+    }
+    
+    vec3 finalColor = leafColor * lighting;
+    
+    // Añadir MUCHO brillo
+    finalColor += vec3(0.15, 0.25, 0.1);
+    
+    fragColor = vec4(finalColor, texColor.a);
+}
+
+'''
+
+
+# Shader temático para la casa/cottage - NARANJA/DORADO INTENSO cálido
+cottage_warm_shader = '''
+#version 330 core
+
+in vec2 fragTexCoords;
+in vec3 fragNormal;
+in vec4 fragPosition;
+
+out vec4 fragColor;
+
+uniform sampler2D tex0;
+
+// Luces
+uniform vec3 ambientLightColor;
+uniform float ambientLightIntensity;
+
+#define MAX_DIR_LIGHTS 4
+uniform int numDirLights;
+uniform vec3 dirLightDirections[MAX_DIR_LIGHTS];
+uniform vec3 dirLightColors[MAX_DIR_LIGHTS];
+uniform float dirLightIntensities[MAX_DIR_LIGHTS];
+
+#define MAX_POINT_LIGHTS 4
+uniform int numPointLights;
+uniform vec3 pointLightPositions[MAX_POINT_LIGHTS];
+uniform vec3 pointLightColors[MAX_POINT_LIGHTS];
+uniform float pointLightIntensities[MAX_POINT_LIGHTS];
+
+uniform float time;
+uniform float value;
+
+void main()
+{
+    vec4 texColor = texture(tex0, fragTexCoords);
+    
+    // Añadir calidez EXTREMA - tonos naranjas/dorados
+    vec3 warmColor = texColor.rgb;
+    warmColor.r *= 1.6;  // MUCHO más rojo
+    warmColor.g *= 1.2;  // Más verde (hace amarillo/naranja)
+    warmColor.b *= 0.6;  // MUCHO menos azul
+    
+    // Iluminación
+    vec3 normal = normalize(fragNormal);
+    vec3 lighting = ambientLightColor * ambientLightIntensity * 1.2;
+    
+    // Luces direccionales
+    for(int i = 0; i < numDirLights && i < MAX_DIR_LIGHTS; i++) {
+        vec3 lightDir = normalize(-dirLightDirections[i]);
+        float diff = max(dot(normal, lightDir), 0.0);
+        lighting += dirLightColors[i] * diff * dirLightIntensities[i] * 1.2;
+    }
+    
+    // Luces puntuales MUCHO más intensas para la cottage
+    for(int i = 0; i < numPointLights && i < MAX_POINT_LIGHTS; i++) {
+        vec3 lightDir = normalize(pointLightPositions[i] - fragPosition.xyz);
+        float distance = length(pointLightPositions[i] - fragPosition.xyz);
+        float attenuation = 1.0 / (1.0 + 0.05 * distance + 0.01 * distance * distance);
+        float diff = max(dot(normal, lightDir), 0.0);
+        lighting += pointLightColors[i] * diff * pointLightIntensities[i] * attenuation * 2.0;
+    }
+    
+    vec3 finalColor = warmColor * lighting;
+    
+    // Añadir brillo cálido ambiental FUERTE
+    finalColor += vec3(0.15, 0.1, 0.02);
+    
+    fragColor = vec4(finalColor, texColor.a);
+}
+
+'''
+
+
+# Shader para la grama - VERDE NEÓN brillante y saturado
+grass_vibrant_shader = '''
+#version 330 core
+
+in vec2 fragTexCoords;
+in vec3 fragNormal;
+in vec4 fragPosition;
+
+out vec4 fragColor;
+
+uniform sampler2D tex0;
+
+// Luces
+uniform vec3 ambientLightColor;
+uniform float ambientLightIntensity;
+
+#define MAX_DIR_LIGHTS 4
+uniform int numDirLights;
+uniform vec3 dirLightDirections[MAX_DIR_LIGHTS];
+uniform vec3 dirLightColors[MAX_DIR_LIGHTS];
+uniform float dirLightIntensities[MAX_DIR_LIGHTS];
+
+#define MAX_POINT_LIGHTS 4
+uniform int numPointLights;
+uniform vec3 pointLightPositions[MAX_POINT_LIGHTS];
+uniform vec3 pointLightColors[MAX_POINT_LIGHTS];
+uniform float pointLightIntensities[MAX_POINT_LIGHTS];
+
+uniform float time;
+uniform float value;
+
+void main()
+{
+    vec4 texColor = texture(tex0, fragTexCoords);
+    
+    // Realzar verde de la grama a nivel NEÓN
+    vec3 grassColor = texColor.rgb;
+    grassColor.g = min(grassColor.g * 2.5, 1.0);  // MUCHO verde
+    grassColor.r *= 0.6;
+    grassColor.b *= 0.8;
+    
+    // Añadir variación dramática para textura
+    float variation = sin(fragTexCoords.x * 200.0) * cos(fragTexCoords.y * 200.0) * 0.15;
+    grassColor *= (1.0 + variation);
+    
+    // Iluminación más brillante
+    vec3 normal = normalize(fragNormal);
+    vec3 lighting = ambientLightColor * ambientLightIntensity * 1.3;
+    
+    // Luces direccionales con más intensidad
+    for(int i = 0; i < numDirLights && i < MAX_DIR_LIGHTS; i++) {
+        vec3 lightDir = normalize(-dirLightDirections[i]);
+        float diff = max(dot(normal, lightDir), 0.0);
+        lighting += dirLightColors[i] * diff * dirLightIntensities[i] * 1.4;
+    }
+    
+    // Luces puntuales
+    for(int i = 0; i < numPointLights && i < MAX_POINT_LIGHTS; i++) {
+        vec3 lightDir = normalize(pointLightPositions[i] - fragPosition.xyz);
+        float distance = length(pointLightPositions[i] - fragPosition.xyz);
+        float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * distance * distance);
+        float diff = max(dot(normal, lightDir), 0.0);
+        lighting += pointLightColors[i] * diff * pointLightIntensities[i] * attenuation;
+    }
+    
+    vec3 finalColor = grassColor * lighting;
+    
+    // Añadir brillo de frescura INTENSO
+    finalColor += vec3(0.1, 0.25, 0.05);
+    
+    fragColor = vec4(finalColor, texColor.a);
+}
+
+'''
+
+
+
+
 
 
 

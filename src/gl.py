@@ -1,9 +1,11 @@
 import glm
+import ctypes
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 
 from src.camera import PerspectiveCamera
 from src.skybox import EnvironmentMap
+from src.lighting import LightManager
 
 
 class OpenGLRenderer:
@@ -36,16 +38,23 @@ class OpenGLRenderer:
         self._main_shader_program = None
         self._postprocess_shader_program = None
         
-        # Lighting
-        self.light_position = glm.vec3(0, 0, 0)
-        self.ambient_intensity = 0.1
+        # Lighting system
+        self.light_manager = LightManager()
         
         # Animation parameters
         self.shader_param_value = 0.0
         self.elapsed_time = 0.0
         
+        # Shader toggle states
+        self.vertex_shaders_enabled = True
+        self.fragment_shaders_enabled = True
+        self.postprocess_shaders_enabled = True
+        
         # Framebuffer setup
         self._setup_framebuffers()
+        
+        # Post-processing quad setup
+        self._setup_postprocess_quad()
     
     def set_environment_map(self, texture_paths):
         """
@@ -99,6 +108,42 @@ class OpenGLRenderer:
         # Unbind framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
     
+    def _setup_postprocess_quad(self):
+        """
+        Creates a fullscreen quad for post-processing effects.
+        Sets up VAO and VBO with vertex positions and texture coordinates.
+        """
+        import numpy as np
+        
+        # Fullscreen quad vertices: position (x, y) and texcoords (u, v)
+        quad_vertices = np.array([
+            # x,    y,   u,   v
+            -1.0, -1.0, 0.0, 0.0,  # Bottom-left
+             1.0, -1.0, 1.0, 0.0,  # Bottom-right
+             1.0,  1.0, 1.0, 1.0,  # Top-right
+            -1.0,  1.0, 0.0, 1.0   # Top-left
+        ], dtype=np.float32)
+        
+        # Create VAO and VBO
+        self._postprocess_vao = glGenVertexArrays(1)
+        self._postprocess_vbo = glGenBuffers(1)
+        
+        glBindVertexArray(self._postprocess_vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self._postprocess_vbo)
+        glBufferData(GL_ARRAY_BUFFER, quad_vertices.nbytes, quad_vertices, GL_STATIC_DRAW)
+        
+        # Position attribute (location 0)
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * 4, ctypes.c_void_p(0))
+        
+        # Texture coordinate attribute (location 1)
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * 4, ctypes.c_void_p(2 * 4))
+        
+        # Unbind
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+    
     def toggle_render_mode(self):
         """Toggles between wireframe and filled polygon rendering."""
         self._wireframe_mode = not self._wireframe_mode
@@ -147,8 +192,8 @@ class OpenGLRenderer:
         Main rendering loop. Renders scene to framebuffer,
         applies post-processing, and displays result.
         """
-        # Render to framebuffer if post-processing is enabled
-        if self._postprocess_shader_program:
+        # Render to framebuffer if post-processing is enabled AND toggle is on
+        if self._postprocess_shader_program and self.postprocess_shaders_enabled:
             glBindFramebuffer(GL_FRAMEBUFFER, self._fbo_id)
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -160,36 +205,44 @@ class OpenGLRenderer:
         if self.environment_map:
             self.environment_map.draw()
         
-        # Render scene objects
-        if self._main_shader_program:
-            glUseProgram(self._main_shader_program)
-            
-            # Set camera matrices
-            self._set_uniform_mat4("viewMatrix", self.camera.view_matrix)
-            self._set_uniform_mat4("projectionMatrix", self.camera.projection_matrix)
-            
-            # Set lighting uniforms
-            self._set_uniform_vec3("pointLight", self.light_position)
-            self._set_uniform_float("ambientLight", self.ambient_intensity)
-            
-            # Set animation uniforms
-            self._set_uniform_float("value", self.shader_param_value)
-            self._set_uniform_float("time", self.elapsed_time)
-            
-            # Set texture samplers
-            self._set_uniform_int("tex0", 0)
-            self._set_uniform_int("tex1", 1)
-        
-        # Render each object in scene
+        # Render each object in scene with its own shader if provided
         for scene_obj in self.scene_objects:
-            if self._main_shader_program:
-                model_matrix = scene_obj.compute_model_matrix()
-                self._set_uniform_mat4("modelMatrix", model_matrix)
+            # Decide which shader program to use based on toggles
+            custom_program = getattr(scene_obj, "shader_program", None)
             
+            # Si vertex_shaders_enabled o fragment_shaders_enabled están desactivados,
+            # usar el shader básico en lugar del personalizado
+            if custom_program and self.vertex_shaders_enabled and self.fragment_shaders_enabled:
+                program = custom_program
+            else:
+                # Usar el shader por defecto sin efectos
+                program = self._main_shader_program
+            
+            if program:
+                glUseProgram(program)
+                # camera
+                self._set_uniform_mat4("viewMatrix", self.camera.view_matrix, program)
+                self._set_uniform_mat4("projectionMatrix", self.camera.projection_matrix, program)
+                
+                # lighting - send all lights to shader
+                self._set_lighting_uniforms(program)
+                
+                # animation
+                self._set_uniform_float("value", self.shader_param_value, program)
+                # Only drive time-based animations for models that enable it
+                # Si vertex shaders están deshabilitados, no animar
+                time_val = self.elapsed_time if (getattr(scene_obj, 'animated', False) and self.vertex_shaders_enabled) else 0.0
+                self._set_uniform_float("time", time_val, program)
+                # samplers
+                self._set_uniform_int("tex0", 0, program)
+                self._set_uniform_int("tex1", 1, program)
+                # model transform
+                model_matrix = scene_obj.compute_model_matrix()
+                self._set_uniform_mat4("modelMatrix", model_matrix, program)
             scene_obj.draw()
         
-        # Apply post-processing
-        if self._postprocess_shader_program:
+        # Apply post-processing only if enabled
+        if self._postprocess_shader_program and self.postprocess_shaders_enabled:
             self._apply_postprocessing()
     
     def _apply_postprocessing(self):
@@ -220,28 +273,60 @@ class OpenGLRenderer:
         if location != -1:
             glUniform1f(location, self.elapsed_time)
         
-        # Draw fullscreen quad
-        glDrawArrays(GL_QUADS, 0, 4)
+        # Draw fullscreen quad using proper VAO
+        glBindVertexArray(self._postprocess_vao)
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4)
+        glBindVertexArray(0)
         
         glEnable(GL_DEPTH_TEST)
     
-    def _set_uniform_mat4(self, name, matrix):
+    def _set_lighting_uniforms(self, program):
+        """Sets lighting uniforms for all lights in the scene"""
+        # Ambient light
+        self._set_uniform_float("ambientIntensity", self.light_manager.get_ambient_intensity(), program)
+        self._set_uniform_vec3("ambientColor", self.light_manager.get_ambient_color(), program)
+        
+        # Directional lights
+        dir_lights = [l for l in self.light_manager.directional_lights if l.enabled]
+        num_dir = min(len(dir_lights), 4)  # Max 4 directional lights
+        self._set_uniform_int("numDirLights", num_dir, program)
+        
+        for i, light in enumerate(dir_lights[:4]):
+            self._set_uniform_vec3(f"dirLightDirections[{i}]", light.direction, program)
+            self._set_uniform_vec3(f"dirLightColors[{i}]", light.color, program)
+            self._set_uniform_float(f"dirLightIntensities[{i}]", light.intensity, program)
+        
+        # Point lights
+        point_lights = [l for l in self.light_manager.point_lights if l.enabled]
+        num_point = min(len(point_lights), 4)  # Max 4 point lights
+        self._set_uniform_int("numPointLights", num_point, program)
+        
+        for i, light in enumerate(point_lights[:4]):
+            self._set_uniform_vec3(f"pointLightPositions[{i}]", light.position, program)
+            self._set_uniform_vec3(f"pointLightColors[{i}]", light.color, program)
+            self._set_uniform_float(f"pointLightIntensities[{i}]", light.intensity, program)
+    
+    def _set_uniform_mat4(self, name, matrix, program=None):
         """Sets a 4x4 matrix uniform."""
-        location = glGetUniformLocation(self._main_shader_program, name)
+        prg = program or self._main_shader_program
+        location = glGetUniformLocation(prg, name)
         glUniformMatrix4fv(location, 1, GL_FALSE, glm.value_ptr(matrix))
     
-    def _set_uniform_vec3(self, name, vector):
+    def _set_uniform_vec3(self, name, vector, program=None):
         """Sets a vec3 uniform."""
-        location = glGetUniformLocation(self._main_shader_program, name)
+        prg = program or self._main_shader_program
+        location = glGetUniformLocation(prg, name)
         glUniform3fv(location, 1, glm.value_ptr(vector))
     
-    def _set_uniform_float(self, name, value):
+    def _set_uniform_float(self, name, value, program=None):
         """Sets a float uniform."""
-        location = glGetUniformLocation(self._main_shader_program, name)
+        prg = program or self._main_shader_program
+        location = glGetUniformLocation(prg, name)
         glUniform1f(location, value)
     
-    def _set_uniform_int(self, name, value):
+    def _set_uniform_int(self, name, value, program=None):
         """Sets an integer uniform."""
-        location = glGetUniformLocation(self._main_shader_program, name)
+        prg = program or self._main_shader_program
+        location = glGetUniformLocation(prg, name)
         glUniform1i(location, value)
 
